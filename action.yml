@@ -1,0 +1,47 @@
+name: Commit Galaxy
+description: Draw your GitHub contributions as a rotating spiral galaxy, one arm per year.
+author: rafael-uchoa
+branding:
+  icon: star
+  color: purple
+
+inputs:
+  github_token:
+    description: Token used to read contributions and push the image.
+    default: ${{ github.token }}
+  username:
+    description: Whose contributions to draw.
+    default: ${{ github.repository_owner }}
+  output:
+    description: Path of the SVG to write.
+    default: commit-galaxy.svg
+  commit:
+    description: Commit and push the SVG when it changes.
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Draw galaxy
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/commit-galaxy.mjs"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GALAXY_USER: ${{ inputs.username }}
+        GALAXY_OUT: ${{ inputs.output }}
+
+    - name: Commit if changed
+      if: inputs.commit == 'true'
+      shell: bash
+      env:
+        OUT: ${{ inputs.output }}
+      run: |
+        if [ -z "$(git status --porcelain -- "$OUT")" ]; then
+          echo "Galaxy unchanged."
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add -- "$OUT"
+        git commit -m "Update commit galaxy"
+        git push
