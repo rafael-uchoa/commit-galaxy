@@ -36,11 +36,13 @@ for (const y of years) {
     { u: USER, from: `${y}-01-01T00:00:00Z`, to: `${y}-12-31T23:59:59Z` },
   );
   const len = isLeap(y) ? 366 : 365;
+  // The year you joined starts at the center like every other year, not partway out its arm.
+  const start = created.startsWith(String(y)) ? Math.round((Date.parse(created) - Date.parse(`${y}-01-01`)) / 86400000) : 0;
   for (const w of d.user.contributionsCollection.contributionCalendar.weeks) {
     for (const day of w.contributionDays) {
       if (!day.date.startsWith(String(y)) || day.date < created || day.date > today) continue;
       const doy = Math.round((Date.parse(day.date) - Date.parse(`${y}-01-01`)) / 86400000);
-      days.push({ y, f: doy / len, c: day.contributionCount, date: day.date });
+      days.push({ y, f: (doy - start) / len, c: day.contributionCount, date: day.date });
     }
   }
 }
