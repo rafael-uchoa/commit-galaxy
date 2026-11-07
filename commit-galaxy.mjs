@@ -113,20 +113,24 @@ years.forEach((_, yi) => {
   }
 });
 
+// Today gets its own marker, always drawn as the tip of the newest arm.
+// The last couple of weeks lose their scatter gradually so no older star sits past the tip.
+const todayCol = yearColor(NY - 1);
+defs += `<g id="today">${upright(`<circle r="11" fill="${todayCol}" fill-opacity=".18"><animate attributeName="fill-opacity" values=".1;.32;.1" dur="3s" repeatCount="indefinite"/></circle><circle r="5.5" fill="${todayCol}" fill-opacity=".45"/><circle r="2.6" fill="#ffffff"/>`)}</g>`;
 let dust = '', stars = '', lx = 0, ly = 0;
-for (const d of days) {
+days.forEach((d, i) => {
   const R = rng(hash(d.date));
-  const jr = gauss(R) * 0.03, ja = gauss(R) * 0.05, cls = 't' + Math.floor(R() * 8);
+  const calm = Math.min(1, (days.length - 1 - i) / 14);
+  const jr = gauss(R) * 0.03 * calm, ja = gauss(R) * 0.05 * calm, cls = 't' + Math.floor(R() * 8);
   const yi = yIndex.get(d.y);
   const r = (0.11 + 0.87 * d.f) * (1 + jr);
   const a = (yi * 2 * Math.PI) / NY + d.f * 0.95 * 2 * Math.PI + ja;
   const x = n(RM * r * Math.cos(a)), y = n(RM * r * Math.sin(a));
-  lx = x; ly = y;
+  if (i === days.length - 1) { lx = x; ly = y; return; }
   const L = lvl(d.c);
-  if (!L) { dust += `<use href="#d${yi}" x="${x}" y="${y}"/>`; continue; }
+  if (!L) { dust += `<use href="#d${yi}" x="${x}" y="${y}"/>`; return; }
   stars += `<use href="#s${yi}_${L}" x="${x}" y="${y}" class="${cls}"/>`;
-}
-const todayCol = yearColor(NY - 1);
+});
 
 // ---- labels ----
 const step = Math.min(58, (W - 28) / NY), legX = (W - step * NY) / 2;
@@ -153,7 +157,7 @@ ${field}
 <g fill="#ffe9cc">${bulge}</g>
 ${dust}
 ${stars}
-<circle cx="${lx}" cy="${ly}" fill="none" stroke="${todayCol}" stroke-width="1.2" vector-effect="non-scaling-stroke"><animate attributeName="r" values="3;17" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="2s" repeatCount="indefinite"/></circle>
+<use href="#today" x="${lx}" y="${ly}"/>
 </g></g>
 <g font-family="${FONT}">
 <text x="14" y="30" font-size="20" font-weight="600" fill="#e8ecff">${years[0]} – ${years[NY - 1]}</text>
