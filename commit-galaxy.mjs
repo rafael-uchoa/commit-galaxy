@@ -42,7 +42,7 @@ for (const y of years) {
     for (const day of w.contributionDays) {
       if (!day.date.startsWith(String(y)) || day.date < created || day.date > today) continue;
       const doy = Math.round((Date.parse(day.date) - Date.parse(`${y}-01-01`)) / 86400000);
-      days.push({ y, f: (doy - start) / len, p: doy / len, c: day.contributionCount, date: day.date });
+      days.push({ y, f: (doy - start) / len, c: day.contributionCount, date: day.date });
     }
   }
 }
@@ -98,7 +98,6 @@ for (let i = 0; i < 700; i++) {
 
 const NY = years.length;
 const yIndex = new Map(years.map((y, i) => [y, i]));
-const U0 = days[0].p;
 const SPIN = 105; // seconds per full turn
 
 // Stars sit on a tilted, rotating disk. Each star shape spins backwards and un-squashes itself,
@@ -124,11 +123,11 @@ days.forEach((d, i) => {
   const calm = Math.min(1, (days.length - 1 - i) / 14);
   const jr = gauss(R) * 0.03 * calm, ja = gauss(R) * 0.05 * calm, cls = 't' + Math.floor(R() * 8);
   const yi = yIndex.get(d.y);
-  // One turn per year, oldest at the center and the current year on the outside.
-  // The same month lines up at the same angle on every turn.
-  const u = yi + d.p, t = (u - U0) / (NY - U0);
-  const r = (0.1 + 0.88 * t) * (1 + jr);
-  const a = u * 2 * Math.PI - Math.PI / 2 + ja;
+  // One arm per year. Newer arms reach further out, so the current year is the outermost.
+  // The winding depends only on distance from the center, so the arms never cross.
+  const g = d.f * 0.87 * (0.4 + 0.6 * (yi + 1) / NY);
+  const r = (0.11 + g) * (1 + jr);
+  const a = (yi * 2 * Math.PI) / NY + (g / 0.87) * 0.95 * 2 * Math.PI + ja;
   const x = n(RM * r * Math.cos(a)), y = n(RM * r * Math.sin(a));
   if (i === days.length - 1) { lx = x; ly = y; return; }
   const L = lvl(d.c);
