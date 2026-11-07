@@ -214,6 +214,38 @@ const far = (list) => [...list].sort((x, y) => x - y)[Math.floor(list.length * 0
 const grow = (far(pts.map((p) => p.r)) - R0) / (far(sq) - R0);
 pts.forEach((p, i) => { p.r = R0 + (sq[i] - R0) * grow; });
 
+// ---- round the outline a little ----
+// The squeeze leaves the outer edge lumpy: some directions reach further than others.
+// Each direction is pulled ROUND of the way toward a smooth oval, then the whole thing is sized
+// back so the galaxy is exactly as wide and tall as before.
+const ROUND = 0.6, NE = 72;
+const sector = (a) => ((Math.floor((a / (2 * Math.PI)) * NE) % NE) + NE) % NE;
+const box = () => {
+  const xs = pts.map((p) => p.r * Math.cos(p.a)), ys = pts.map((p) => p.r * Math.sin(p.a));
+  return [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
+};
+const [w0, h0] = box();
+const rawEdge = new Float64Array(NE);
+for (const p of pts) rawEdge[sector(p.a)] = Math.max(rawEdge[sector(p.a)], p.r);
+const edge = Float64Array.from(rawEdge, (_, b) => {
+  let t = 0, ws = 0;
+  for (let k = -6; k <= 6; k++) { const w = Math.exp(-((k / 2.5) ** 2) / 2); t += w * rawEdge[(b + k + NE) % NE]; ws += w; }
+  return t / ws;
+});
+// The smooth shape is an oval with the same proportions as the galaxy, so width and height both stay put.
+const oval = (a) => 1 / Math.hypot(Math.cos(a) / w0, Math.sin(a) / h0);
+const ovalScale = edge.reduce((s, e) => s + e, 0) / Array.from({ length: NE }, (_, b) => oval(((b + 0.5) / NE) * 2 * Math.PI)).reduce((s, v) => s + v, 0);
+const edgeAt = (a) => { const c = ((a / (2 * Math.PI)) * NE - 0.5 + NE) % NE, b = Math.floor(c), t = c - b; return edge[b] * (1 - t) + edge[(b + 1) % NE] * t; };
+for (const p of pts) {
+  const e = edgeAt(p.a), target = ROUND * ovalScale * oval(p.a) + (1 - ROUND) * e;
+  p.r = R0 + (p.r - R0) * ((target - R0) / (e - R0));
+}
+// Size it back to the exact width and height, nudging sideways and up-down separately.
+for (let pass = 0; pass < 4; pass++) {
+  const [w1, h1] = box(), sx = w0 / w1, sy = h0 / h1;
+  pts.forEach((p) => { p.r = R0 + (p.r - R0) / Math.hypot(Math.cos(p.a) / sx, Math.sin(p.a) / sy); });
+}
+
 const dustPts = group(), starPts = group();
 let lx = 0, ly = 0;
 for (const p of pts) {
