@@ -123,9 +123,9 @@ days.forEach((d, i) => {
   const calm = Math.min(1, (days.length - 1 - i) / 14);
   const jr = gauss(R) * 0.03 * calm, ja = gauss(R) * 0.05 * calm, cls = 't' + Math.floor(R() * 8);
   const yi = yIndex.get(d.y);
-  // One arm per year. Each arm sits just outside the year before it, and newer arms reach further out.
+  // One arm per year, all the same length. Moving outward, each arm sits just outside the year before it.
   // The winding depends only on distance from the center, so the arms never cross.
-  const g = d.f * 0.87 * (0.4 + 0.6 * (yi + 1) / NY);
+  const g = d.f * 0.87;
   const r = (0.11 + g) * (1 + jr);
   const a = -(yi * 2 * Math.PI) / NY + (g / 0.87) * 0.95 * 2 * Math.PI + ja;
   const x = n(RM * r * Math.cos(a)), y = n(RM * r * Math.sin(a));
