@@ -64,9 +64,12 @@ const yearColor = (i) => {
   return t === k ? RAMP[k] : t === k + 1 ? RAMP[k + 1] : mix(RAMP[k], RAMP[k + 1], t - k);
 };
 // Young accounts get a smaller galaxy that grows to full size by about six years.
-const AGE = Math.min(1, Math.max(0.45, Math.sqrt(days.length / (6 * 365))));
+const AGE = Math.min(1, Math.max(0.6, Math.sqrt(days.length / (6 * 365))));
 const W = 800, H = 496, SQ = 0.48, CX = W / 2, CY = H / 2 + 4;
-const RM = Math.min(W * 0.46, (H / 2 - 34) / SQ);
+// ZOOM enlarges the whole galaxy, stars included, so it fills more of the picture
+// while neighbouring years still touch.
+const ZOOM = 1.28;
+const RM = Math.min(W * 0.46, (H / 2 - 34) / SQ) * ZOOM;
 const FONT = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
 const n = (v) => +v.toFixed(1);
 
@@ -155,9 +158,9 @@ const upright = (inner) =>
   `<g transform="scale(1 ${n(1 / SQ * 1000) / 1000})">${inner}</g><animateTransform attributeName="transform" type="rotate" values="0;-${TICK}" keyTimes="0;1" calcMode="discrete" dur="${+tickDur.toFixed(4)}s" begin="-${+(tickDur / 2).toFixed(4)}s" accumulate="sum" repeatCount="indefinite"/>`;
 years.forEach((_, yi) => {
   const col = yearColor(yi);
-  defs += marker(`d${yi}`, `<g>${upright(`<circle r=".75" fill="${col}" fill-opacity=".32"/>`)}</g>`);
+  defs += marker(`d${yi}`, `<g>${upright(`<circle r="${n(0.75 * ZOOM)}" fill="${col}" fill-opacity=".32"/>`)}</g>`);
   for (let L = 1; L <= 4; L++) {
-    const rad = 0.55 + L * 0.6;
+    const rad = (0.55 + L * 0.6) * ZOOM;
     defs += marker(`s${yi}_${L}`, `<g>${upright(`<circle r="${n(rad * 3)}" fill="${col}" fill-opacity=".24"/><circle r="${n(rad)}" fill="${L >= 3 ? '#ffffff' : col}"/>`)}</g>`);
   }
 });
@@ -165,7 +168,7 @@ years.forEach((_, yi) => {
 // Today gets its own marker, always drawn as the tip of the newest arm.
 // The last couple of weeks lose their scatter gradually so no older star sits past the tip.
 const todayCol = yearColor(NY - 1);
-defs += `<g id="today">${upright(`<circle r="11" fill="${todayCol}" fill-opacity=".18"><animate attributeName="fill-opacity" values=".1;.32;.1" dur="3s" repeatCount="indefinite"/></circle><circle r="5.5" fill="${todayCol}" fill-opacity=".45"/><circle r="2.6" fill="#ffffff"/>`)}</g>`;
+defs += `<g id="today">${upright(`<circle r="${n(11 * ZOOM)}" fill="${todayCol}" fill-opacity=".18"><animate attributeName="fill-opacity" values=".1;.32;.1" dur="3s" repeatCount="indefinite"/></circle><circle r="${n(5.5 * ZOOM)}" fill="${todayCol}" fill-opacity=".45"/><circle r="${n(2.6 * ZOOM)}" fill="#ffffff"/>`)}</g>`;
 const pts = [];
 const dayInYear = new Map();
 days.forEach((d, i) => {
