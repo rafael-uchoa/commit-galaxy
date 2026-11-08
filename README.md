@@ -1,7 +1,3 @@
-# Commit Galaxy
-
-Your GitHub contributions as a rotating galaxy. Every day is a star, every year is an arm.
-
 ## Setup
 
 1. In your profile repo (`username/username`), create `.github/workflows/commit-galaxy.yml`:
@@ -29,8 +25,6 @@ Your GitHub contributions as a rotating galaxy. Every day is a star, every year 
    ```md
    ![Commit Galaxy](./commit-galaxy.svg)
    ```
-
-It updates every day.
 
 ## Preview
 
