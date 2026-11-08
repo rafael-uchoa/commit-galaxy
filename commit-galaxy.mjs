@@ -177,9 +177,10 @@ days.forEach((d, i) => {
   const arm = yi * SPLIT + (nth % SPLIT);
   // One arm per year, all the same length. Moving outward, each arm sits just outside the year before it.
   // The winding depends only on distance from the center, so the arms never cross.
-  // Each arm spreads across the whole lane up to its neighbours, so there's no dark gap between years.
   const g = d.f * 0.87;
-  const r = (0.11 + g + (R() - 0.5) * ARM_W * calm) * (1 + jr * 0.3);
+  // Stars bunch toward the middle of their year's lane and thin out toward its edges, so each year
+  // reads as its own ribbon while still reaching its neighbours.
+  const r = (0.11 + g + (R() + R() + R() - 1.5) * 0.4 * ARM_W * calm) * (1 + jr * 0.3);
   const a = -(arm * 2 * Math.PI) / NA + (g / 0.87) * 0.95 * 2 * Math.PI + ja;
   pts.push({ r, a, yi, cls, L: lvl(d.c), today: i === days.length - 1 });
 });
@@ -268,9 +269,14 @@ for (let pass = 0; pass < 4; pass++) {
   pts.forEach((p) => { p.r = R0 + (p.r - R0) / Math.hypot(Math.cos(p.a) / sx, Math.sin(p.a) / sy); });
 }
 
+// Roll the galaxy tighter: every ribbon moves in toward the center, while each star keeps its
+// on-screen size, so neighbouring years close up against each other without blending.
+const COMPACT = 0.78;
+pts.forEach((p) => { p.r = R0 + (p.r - R0) * COMPACT; });
+
 // Young galaxies: set the size from the account's age, however far this year's arms have grown.
 if (AGE < 1) {
-  const scale = (AGE * 0.97) / far(pts.map((p) => p.r));
+  const scale = (AGE * 0.97 * COMPACT) / far(pts.map((p) => p.r));
   pts.forEach((p) => { p.r *= scale; });
 }
 
@@ -307,8 +313,11 @@ if (NY <= 10) {
   legend += `<text x="${n(x0 + 38 + NY * step)}" y="${H - 10.5}" font-size="10" fill="#d8dcf0">${years[NY - 1]}</text>`;
 }
 
+// All 8 twinkle groups share one speed, each an eighth of a cycle apart. At any moment as many stars
+// are brightening as dimming, so the picture as a whole never dims and recovers (e.g. after loading).
+const TW = 3.4;
 const twinkle = Array.from({ length: 8 }, (_, i) =>
-  `.t${i}{animation:tw ${(2.6 + i * 0.23).toFixed(2)}s ease-in-out ${(-i * 0.47).toFixed(2)}s infinite}`).join('');
+  `.t${i}{animation:tw ${TW}s ease-in-out -${+((i * TW) / 8).toFixed(3)}s infinite}`).join('');
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Commit Galaxy: ${total} contributions from ${years[0]} to ${years[NY - 1]}">
 <title>Commit Galaxy</title>
