@@ -127,21 +127,7 @@ fieldGroups.forEach((g, t) => {
   field += '</g>';
 });
 
-// ---- galaxy: core cluster, then one arm per year ----
-const RC = rng(11);
-const bulgeGroups = group();
-for (let i = 0; i < 700; i++) {
-  const r = Math.abs(gauss(RC)) * 0.085 * RM * Math.sqrt(AGE), a = RC() * 2 * Math.PI;
-  const x = n(r * Math.cos(a)), y = n(r * Math.sin(a));
-  add(bulgeGroups, `${n((RC() * 0.7 + 0.5) * 0.6)}|${n(RC() * 0.45 + 0.12)}`, `M${x} ${y}`);
-}
-let bulge = '';
-[...bulgeGroups].forEach(([k, pts], i) => {
-  const [r, op] = k.split('|');
-  defs += marker(`b${i}`, `<circle r="${r}" fill="#ffe9cc" fill-opacity="${op}"/>`);
-  bulge += dots(`b${i}`, pts);
-});
-
+// ---- galaxy: one arm per year, around a round bulge ----
 const NY = years.length;
 const yIndex = new Map(years.map((y, i) => [y, i]));
 const SPIN = 105; // seconds per full turn
@@ -167,6 +153,42 @@ years.forEach((_, yi) => {
     defs += marker(`s${yi}_${L}`, `<g>${upright(`<circle r="${n(rad * 3)}" fill="${col}" fill-opacity=".24"/><circle r="${n(rad)}" fill="${L >= 3 ? '#ffffff' : col}"/>`)}</g>`);
   }
 });
+
+// The bulge: a ball of small warm stars in the middle. A real bulge sits through the disk rather than
+// lying flat in it, so each of its stars also gets a height above or below the disk, forming a slightly
+// flattened ball (BULGE_Q tall for every 1 wide). Seen at the galaxy's tilt, a star's height moves it
+// straight up or down on screen. So the ball is cut into thin horizontal slices: each slice is its own
+// little tilted disk, lifted to its height and turning with the galaxy. Slices behind the disk are
+// drawn before it, slices in front of it after it.
+const BULGE_Q = 0.7, TILT_SIN = Math.sqrt(1 - SQ * SQ), SLICES = 14;
+const bulgeLook = Math.hypot(BULGE_Q * TILT_SIN, SQ); // how tall the ball looks on screen for every 1 wide
+let bulgeBack = '', bulgeFront = '';
+{
+  const RS = rng(11), balls = [], looks = new Map();
+  for (let i = 0; i < 900; i++) {
+    const rho = Math.abs(gauss(RS)) * 0.1 * RM * Math.sqrt(AGE), up = RS() * 2 - 1, flat = Math.sqrt(1 - up * up), a = RS() * 2 * Math.PI;
+    balls.push({ x: rho * flat * Math.cos(a), y: rho * flat * Math.sin(a), z: rho * up * BULGE_Q, r: n((RS() * 0.7 + 0.5) * 0.6 * Math.sqrt(SQ)), op: n(RS() * 0.45 + 0.12) });
+  }
+  balls.sort((p, q) => p.z - q.z);
+  const per = Math.ceil(balls.length / SLICES);
+  for (let k = 0; k < SLICES; k++) {
+    const part = balls.slice(k * per, (k + 1) * per);
+    const z = part.reduce((t, p) => t + p.z, 0) / part.length;
+    // One marker per size and brightness, shared by all slices.
+    const byLook = group();
+    for (const p of part) add(byLook, `${p.r}|${p.op}`, `M${n(p.x)} ${n(p.y)}`);
+    const paths = [...byLook].map(([look, d]) => {
+      if (!looks.has(look)) {
+        looks.set(look, `b${looks.size}`);
+        const [r, op] = look.split('|');
+        defs += marker(looks.get(look), `<g>${upright(`<circle r="${r}" fill="#ffe9cc" fill-opacity="${op}"/>`)}</g>`);
+      }
+      return dots(looks.get(look), d);
+    }).join('');
+    const slice = `<g transform="translate(${CX} ${n(CY - z * TILT_SIN)}) scale(1 ${SQ})"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="${SPIN}s" repeatCount="indefinite"/>${paths}</g></g>`;
+    if (z < 0) bulgeBack += slice; else bulgeFront += slice;
+  }
+}
 
 // Today gets its own marker, always drawn as the tip of the newest arm.
 // The last couple of weeks lose their scatter gradually so no older star sits past the tip.
@@ -281,9 +303,29 @@ const COMPACT = 0.78;
 pts.forEach((p) => { p.r = R0 + (p.r - R0) * COMPACT; });
 
 // Young galaxies: set the size from the account's age, however far this year's arms have grown.
+let shrink = 1;
 if (AGE < 1) {
-  const scale = (AGE * 0.97 * COMPACT) / far(pts.map((p) => p.r));
-  pts.forEach((p) => { p.r *= scale; });
+  shrink = (AGE * 0.97 * COMPACT) / far(pts.map((p) => p.r));
+  pts.forEach((p) => { p.r *= shrink; });
+}
+
+// ---- spiral arms with one slant ----
+// Up to here every arm moves outward by the same distance for every degree it turns, like a coiled
+// rope. That makes arms open near the center and almost circular near the edge. Real spiral arms keep
+// the same slant all the way out: tightly wound in the middle, sweeping wide at the rim.
+// To get that shape, each ring of the galaxy is turned by a different amount. A ring keeps exactly
+// the stars it had, in the same order around it, so years still never overlap, every star stays at
+// its distance from the center, and the size does not change. The innermost and outermost rings stay
+// where they were, so each arm still makes the same 0.95 turn from start to tip.
+{
+  const inner = R0 * shrink, outer = far(pts.map((p) => p.r));
+  if (outer > inner * 1.1) {
+    const slant = Math.log(outer / inner) / TURN; // about 0.33, an 18 degree slant
+    for (const p of pts) {
+      const r = Math.max(p.r, inner * 0.6);
+      p.a += Math.log(r / inner) / slant - ((r - inner) / (outer - inner)) * TURN;
+    }
+  }
 }
 
 const dustPts = group(), starPts = group();
@@ -333,14 +375,15 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 <rect width="${W}" height="${H}" fill="#04050b"/>
 ${nebula}
 ${field}
-<g transform="translate(${CX} ${n(CY)}) scale(1 0.6)"><circle r="${n(RM * 0.24 * Math.sqrt(AGE))}" fill="url(#core)"/></g>
+<g transform="translate(${CX} ${n(CY)}) scale(1 ${n(bulgeLook * 100) / 100})"><circle r="${n(RM * 0.2 * Math.sqrt(AGE))}" fill="url(#core)"/></g>
+${bulgeBack}
 <g transform="translate(${CX} ${n(CY)}) scale(1 ${SQ})"><g>
 <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="${SPIN}s" repeatCount="indefinite"/>
-${bulge}
 ${dust}
 ${stars}
 <use href="#today" x="${lx}" y="${ly}"/>
 </g></g>
+${bulgeFront}
 <g font-family="${FONT}">
 <text x="14" y="30" font-size="20" font-weight="600" fill="#e8ecff">${NY === 1 ? years[0] : `${years[0]} – ${years[NY - 1]}`}</text>
 <text x="15" y="50" font-size="11" fill="#8a90b0">${total.toLocaleString('en-US')} contributions</text>
