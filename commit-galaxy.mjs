@@ -109,18 +109,21 @@ NEB.forEach(([x, y, r, rgb], i) => {
 defs += '<radialGradient id="core"><stop offset="0" stop-color="#ffebcd" stop-opacity=".30"/><stop offset=".35" stop-color="#ffd7b4" stop-opacity=".09"/><stop offset="1" stop-color="#ffc8aa" stop-opacity="0"/></radialGradient>';
 
 const RB = rng(7);
-// Tiny squares, one path per twinkle group, color and brightness.
+// Tiny squares, grouped by twinkle group, color and brightness.
+// Speed: every square is its own <path>. A browser fills a lone rectangle directly, but a single path
+// made of many scattered squares is handled as one large complex shape, which costs far more to
+// redraw on every frame.
 const fieldGroups = Array.from({ length: 8 }, group);
 for (let i = 0; i < 320; i++) {
   const s = RB() < 0.08 ? 1.6 : RB() * 0.9 + 0.4;
   const col = RB() < 0.3 ? '#cfe0ff' : RB() < 0.2 ? '#ffe6cf' : '#ffffff';
   const x = n(RB() * W), y = n(RB() * H), op = n(RB() * 0.6 + 0.15), w = n(s);
-  add(fieldGroups[i % 8], `${col}|${op}`, `M${x} ${y}h${w}v${w}h-${w}z`);
+  add(fieldGroups[i % 8], `${col}|${op}`, `<path d="M${x} ${y}h${w}v${w}h-${w}z"/>`);
 }
 let field = '';
 fieldGroups.forEach((g, t) => {
   field += `<g class="t${t}">`;
-  for (const [k, d] of g) { const [col, op] = k.split('|'); field += `<path d="${d.join('')}" fill="${col}" fill-opacity="${op}"/>`; }
+  for (const [k, d] of g) { const [col, op] = k.split('|'); field += `<g fill="${col}" fill-opacity="${op}">${d.join('')}</g>`; }
   field += '</g>';
 });
 
