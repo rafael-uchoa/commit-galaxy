@@ -479,8 +479,8 @@ for (let i = 0; i < TS * TS; i++) {
 const glow = `data:image/jpeg;base64,${encodeJPEG(rgb, TS, TS, 82).toString('base64')}`;
 
 // ---- the sky ----
-// Plain dark space, so the galaxy is the only thing glowing. A few far-away galaxies and a handful of
-// bright nearby stars give it depth. Every account gets its own sky.
+// Plain dark space, so the galaxy is the only thing glowing. A few far-away galaxies give it depth.
+// Every account gets its own sky.
 const RB = rng(hash(USER));
 const onGalaxy = (x, y, k) => Math.hypot((x - CX) / (RM * OUTER * k), (y - CY) / (RM * OUTER * SQ * k)) < 1;
 const onText = (x, y) => (y < 74 && (x < 290 || x > W - 190)) || y > H - 34;
@@ -510,18 +510,6 @@ fieldGroups.forEach((g, t) => {
   for (const [k, d] of g) { const [col, op] = k.split('|'); field += `<g fill="${col}" fill-opacity="${op}">${d.join('')}</g>`; }
   field += '</g>';
 });
-
-// Bright nearby stars with the cross of light a telescope gives them.
-defs += '<radialGradient id="fh"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".22" stop-color="#dce8ff" stop-opacity=".3"/><stop offset="1" stop-color="#b8cdff" stop-opacity="0"/></radialGradient>';
-defs += `<g id="flare"><circle r="9" fill="url(#fh)"/><path transform="scale(21)" d="${CROSS(1, 0.04)}" fill="url(#ray)"/><circle r="1.5" fill="#fff"/></g>`;
-let near = '';
-const taken = [];
-for (let i = 0; i < 4; i++) {
-  let x, y, tries = 0;
-  do [x, y] = place(0.95, 30); while (tries++ < 50 && taken.some(([px, py]) => Math.hypot(x - px, y - py) < 200)); // keep them apart
-  taken.push([x, y]);
-  near += `<use href="#flare" class="t${i * 2}" transform="translate(${x} ${y}) scale(${n2(0.45 + RB() * 0.6)})"/>`;
-}
 
 // The bulge's glow: warm, nearly white in the middle. It is a ball, not part of the disk, so it does not turn.
 defs += '<radialGradient id="core"><stop offset="0" stop-color="#fffaf0" stop-opacity=".95"/><stop offset=".1" stop-color="#ffecc8" stop-opacity=".7"/><stop offset=".28" stop-color="#ffd29a" stop-opacity=".3"/><stop offset=".6" stop-color="#ffb37a" stop-opacity=".08"/><stop offset="1" stop-color="#ff9d6a" stop-opacity="0"/></radialGradient>';
@@ -569,7 +557,6 @@ ${stars}
 <use href="#today" x="${lx}" y="${ly}"/>
 </g></g>
 ${bulgeFront}
-${near}
 <g font-family="${FONT}">
 <text x="16" y="32" font-size="20" font-weight="600" letter-spacing=".3" fill="#f2f5ff">${total.toLocaleString('en-US')} <tspan font-size="12" font-weight="400" fill="${INK}">contributions</tspan></text>
 ${legend}
