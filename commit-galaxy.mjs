@@ -528,7 +528,6 @@ defs += '<radialGradient id="core"><stop offset="0" stop-color="#fffaf0" stop-op
 
 // ---- labels ----
 const INK = '#aeb7d0';
-const esc = (t) => t.replace(/[&<>]/g, (ch) => `&#${ch.charCodeAt(0)};`);
 let legend = '';
 if (NY <= 10) {
   const step = Math.min(58, (W - 28) / NY), legX = (W - step * NY) / 2;
@@ -543,15 +542,6 @@ if (NY <= 10) {
   years.forEach((_, i) => { legend += `<circle cx="${n(x0 + 38 + i * step)}" cy="${H - 14}" r="2.6" fill="${whiten(yearColor(i), 0.2)}"/>`; });
   legend += `<text x="${n(x0 + 38 + NY * step)}" y="${H - 10.5}" font-size="10" fill="${INK}">${years[NY - 1]}</text>`;
 }
-
-// Top right: how to read a star, in the "less ... more" form GitHub's own contribution graph uses.
-let scale = `<text x="${W - 158}" y="31" font-size="9.5" letter-spacing="1.6" text-anchor="end" fill="#7f89a6">LESS</text>`;
-for (let L = 1; L <= 5; L++) {
-  const col = yearColor(NY - 1), core = L === 1 ? whiten(col, 0.5) : L === 2 ? whiten(col, 0.8) : '#fff';
-  scale += `<g transform="translate(${W - 164 + L * 19} 27.5)"><circle r="${[3.4, 4.8, 6.4, 8.4, 11][L - 1]}" fill="url(#h${NY - 1})"/>${L === 5 ? `<path transform="scale(13)" d="${CROSS(1, 0.06)}" fill="url(#ray)"/>` : ''}<circle r="${[1.1, 1.45, 1.85, 2.3, 2.8][L - 1]}" fill="${core}"/></g>`;
-}
-scale += `<text x="${W - 16}" y="31" font-size="9.5" letter-spacing="1.6" text-anchor="end" fill="#7f89a6">MORE</text>`;
-scale += `<text x="${W - 16}" y="50" font-size="9.5" letter-spacing="1.6" text-anchor="end" fill="#7f89a6">ONE STAR PER DAY</text>`;
 
 // All 8 twinkle groups share one speed, each an eighth of a cycle apart. At any moment as many stars
 // are brightening as dimming, so the picture as a whole never dims and recovers (e.g. after loading).
@@ -582,8 +572,6 @@ ${bulgeFront}
 ${near}
 <g font-family="${FONT}">
 <text x="16" y="32" font-size="20" font-weight="600" letter-spacing=".3" fill="#f2f5ff">${total.toLocaleString('en-US')} <tspan font-size="12" font-weight="400" fill="${INK}">contributions</tspan></text>
-<text x="17" y="50" font-size="9.5" letter-spacing="1.2" fill="#7f89a6">${esc(USER)} · ${NY === 1 ? years[0] : `${years[0]} – ${years[NY - 1]}`}</text>
-${scale}
 ${legend}
 </g>
 <rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="11.5" fill="none" stroke="#fff" stroke-opacity=".07"/>
